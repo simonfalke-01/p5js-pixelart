@@ -142,6 +142,12 @@ let drawn = initialize(COLUMNS, ROWS);
 
 let mode = `draw`;
 
+let current_color;
+let current_alpha = 255;
+
+let picker;
+let slider;
+
 let _ = new p5(( s ) => {
     const draw_pixels = (pixel_array, info) => {
         let rows = pixel_array.length;
@@ -151,7 +157,7 @@ let _ = new p5(( s ) => {
             for (let j = 0; j < columns; ++j) {
                 let current_coords = pixel_array[i][j].get_coords(...info);
                 let current_alpha = pixel_array[i][j].get_alpha();
-                let current_color = s.color(...pixel_array[i][j].get_color());
+                let current_color = s.color(pixel_array[i][j].get_color());
                 current_color.setAlpha(current_alpha);
                 s.noStroke();
                 s.fill(current_color);
@@ -164,19 +170,32 @@ let _ = new p5(( s ) => {
         return [s.mouseX, s.mouseY];
     };
 
+    const link_drawn = () => {
+        if (s.pmouseX !== s.mouseX || s.pmouseY !== s.mouseY) {
+            let linked_points = pixels_to_link_points(...INFO, link_points([s.pmouseX, s.pmouseY], mouse()));
+            for (let i = 0; i < linked_points.length; ++i) {
+                drawn[linked_points[i][0]][linked_points[i][1]] = new pixel(current_alpha, current_color, ...linked_points[i]);
+            }
+        }
+    }
+
     const edit_drawn = (mode, drawn) => {
         if (mode === `draw`) {
-            let current_color = [0, 170, 255];
-            let current_alpha = 255;
+            current_color = picker.color();
+            current_alpha = slider.value();
             let current_bound = which_bound(...INFO, ...mouse());
             drawn[current_bound[0]][current_bound[1]] = new pixel(current_alpha, current_color, ...current_bound);
+
+            link_drawn();
         }
 
         else if (mode === `erase`) {
-            let current_color = [0, 0, 0];
-            let current_alpha = 0;
+            current_color = [0, 0, 0];
+            current_alpha = 0;
             let current_bound = which_bound(...INFO, ...mouse());
             drawn[current_bound[0]][current_bound[1]] = new pixel(current_alpha, current_color, ...current_bound);
+
+            link_drawn();
         }
 
         return drawn;
@@ -197,6 +216,18 @@ let _ = new p5(( s ) => {
         pencil.mousePressed(() => {
             mode = `draw`;
         });
+
+        let clear = s.createButton(`Clear`);
+        clear.position(0, 40);
+        clear.mousePressed(() => {
+            drawn = initialize(COLUMNS, ROWS);
+        });
+
+        picker = s.createColorPicker(s.color(0, 170, 255));
+        picker.position(0, 60);
+
+        slider = s.createSlider(0, 255, 255);
+        slider.position(0, 90);
     };
 
     s.draw = () => {
@@ -210,25 +241,6 @@ let _ = new p5(( s ) => {
     }
 
     s.mouseDragged = () => {
-        /*let current_color = [0, 170, 255];
-        let current_alpha = 255;
-        let current_bound = which_bound(...INFO, ...mouse());
-        drawn[current_bound[0]][current_bound[1]] = new pixel(current_alpha, current_color, ...current_bound);
-
-        if (s.pmouseX !== s.mouseX || s.pmouseY !== s.mouseY) {
-            let linked_points = pixels_to_link_points(...INFO, link_points([s.pmouseX, s.pmouseY], mouse()));
-            for (let i = 0; i < linked_points.length; ++i) {
-                drawn[linked_points[i][0]][linked_points[i][1]] = new pixel(current_alpha, current_color, ...linked_points[i]);
-            }
-        }*/
-
         drawn = edit_drawn(mode, drawn);
-
-        if (s.pmouseX !== s.mouseX || s.pmouseY !== s.mouseY) {
-            let linked_points = pixels_to_link_points(...INFO, link_points([s.pmouseX, s.pmouseY], mouse()));
-            for (let i = 0; i < linked_points.length; ++i) {
-                drawn[linked_points[i][0]][linked_points[i][1]] = new pixel(current_alpha, current_color, ...linked_points[i]);
-            }
-        }
     };
 });
